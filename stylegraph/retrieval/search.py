@@ -26,7 +26,16 @@ def resolve_image_path(path_str: str) -> Path:
     path = Path(path_str)
     if path.exists():
         return path
-    return Path(path_str)
+        
+    from stylegraph.config import DEMO_IMAGES_DIR, CATALOG_DIR
+    filename = path.name
+    
+    if (DEMO_IMAGES_DIR / filename).exists():
+        return DEMO_IMAGES_DIR / filename
+    if (CATALOG_DIR / filename).exists():
+        return CATALOG_DIR / filename
+        
+    return path
 
 
 class SearchEngine:
