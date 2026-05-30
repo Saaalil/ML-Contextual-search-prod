@@ -398,6 +398,15 @@ def build_app(index_dir: str | None = None, device: str | None = None):
                     outputs=[gallery_img],
                 )
 
+            # ── Hidden API Endpoints ─────────────────────────────────
+            count_btn = gr.Button("Get Count", visible=False)
+            count_text = gr.Textbox(visible=False)
+            
+            def get_db_count():
+                return str(len(engine.catalog)) if engine else "0"
+                
+            count_btn.click(get_db_count, inputs=[], outputs=[count_text], api_name="get_count")
+
         # Footer
         gr.HTML(
             """
