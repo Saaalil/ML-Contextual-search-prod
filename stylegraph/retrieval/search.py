@@ -185,6 +185,14 @@ class SearchEngine:
             skip = False
             attrs = item.get("attrs", {})
 
+            # Price filters
+            if "price_max" in filters:
+                if float(item.get("price", 1e9)) > filters["price_max"]:
+                    skip = True
+            if "price_min" in filters:
+                if float(item.get("price", 0)) < filters["price_min"]:
+                    skip = True
+
             # Category filter (removed - let vector search handle it)
             
             # Attribute filters (color, style, occasion, etc.) (removed - let vector search handle it)

@@ -1,76 +1,90 @@
 """
 Query Understanding Layer — parses natural language queries into structured
-search intent using Query Expansion (Vibe Enhancements) and strict constraint extraction.
+search intent using Gemini 2.0 Flash.
 """
 
-import re
+import json
+import os
 import logging
 from typing import Optional
 
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from stylegraph.config import GEMINI_LLM_MODEL
+
 logger = logging.getLogger(__name__)
 
-# Vibe dictionary for Query Expansion.
-# When a user types a short keyword, we inject rich, semantic descriptors
-# into the embedding query to give FAISS more context.
-VIBE_DICTIONARY = {
-    "office": "professional, formal, structured, elegant, tailored, workwear",
-    "beach": "summer, casual, vibrant, lightweight, breezy, tropical, relaxed",
-    "party": "bold, stylish, evening, eye-catching, festive, chic",
-    "workout": "athletic, breathable, sporty, activewear, comfortable, flexible",
-    "gym": "athletic, breathable, sporty, activewear, comfortable, flexible",
-    "casual": "relaxed, comfortable, everyday, effortless, simple, laid-back",
-    "vintage": "retro, classic, nostalgic, old-school, timeless, authentic",
-    "streetwear": "urban, trendy, oversized, edgy, cool, hype, casual",
-    "minimalist": "clean, simple, monochrome, sleek, modern, understated",
-    "boho": "bohemian, flowy, earthy, pattern, relaxed, free-spirited",
-    "wedding": "formal, elegant, sophisticated, gown, suit, celebratory, refined",
-    "winter": "warm, cozy, insulated, heavy, layered, cold-weather",
-    "summer": "light, breathable, cool, sunny, warm-weather, bright",
+_SYSTEM_PROMPT = """You are a fashion search query parser. Given a natural language query,
+extract structured information. Return ONLY valid JSON with these fields:
+
+{
+  "semantic_query": "the core search text for embedding similarity (clean, no filters)",
+  "filters": {
+    "color": "string or null",
+    "category": "string or null (e.g. dress, jacket, pants, skirt, top)",
+    "occasion": "string or null (e.g. office, casual, party, beach, wedding)",
+    "style": "string or null (e.g. bohemian, minimal, streetwear, vintage)",
+    "season": "string or null (e.g. summer, winter, spring, fall)",
+    "material": "string or null",
+    "fit": "string or null (e.g. slim, oversized, regular)",
+    "price_max": "number or null",
+    "price_min": "number or null"
+  },
+  "exclude": ["list of things to exclude, e.g. 'sporty', 'formal'"],
+  "intent": "find_items | find_similar | browse_category"
 }
 
+Rules:
+- Keep semantic_query short and focused (3-8 words)
+- Extract price constraints like 'under $50' into price_max
+- Extract negations like 'not sporty' or 'but not formal' into exclude list
+- Use lowercase for all filter values
+- Return null (not "null") for unknown fields
+"""
+
+
 class QueryParser:
-    """Parses and mathematically enhances queries for maximum semantic vector relevance."""
+    """Parses natural language queries into structured fashion search intent."""
 
     def __init__(self, api_key: Optional[str] = None):
-        pass
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY not set.")
+        self.client = genai.Client(api_key=self.api_key)
 
     def parse(self, query: str) -> dict:
-        """Parse a natural language query into enhanced semantic intent."""
-        query_lower = query.lower()
-        filters = {}
-        exclude = []
-        
-        # 1. Extract STRICT Exclusions
-        # Matches: "not red", "no jeans"
-        not_match = re.search(r'(?:not|no)\s+([a-zA-Z0-9]+)', query_lower)
-        if not_match:
-            exclude.append(not_match.group(1))
-
-        # 2. Clean the semantic query
-        # Remove the strict constraints so they don't confuse the embedding model
-        semantic_query = query_lower
-        semantic_query = re.sub(r'(?:not|no)\s+([a-zA-Z0-9]+)', '', semantic_query)
-        semantic_query = semantic_query.strip()
-        
-        if not semantic_query:
-            semantic_query = query
-
-        # 4. Contextual Query Expansion (The Secret Sauce)
-        # If the user's query contains a known vibe, append its rich descriptors!
-        enhancements = []
-        for vibe, descriptors in VIBE_DICTIONARY.items():
-            pattern = rf'\b{vibe}\b'
-            if re.search(pattern, semantic_query):
-                enhancements.append(descriptors)
-                
-        if enhancements:
-            # Append the enhancements in parentheses so the model groups them semantically
-            semantic_query += f" (Context: {', '.join(enhancements)})"
-            logger.info(f"Expanded Query: {semantic_query}")
-
-        return {
-            "semantic_query": semantic_query,
-            "filters": filters,  # ONLY strict constraints like price now!
-            "exclude": exclude,
-            "intent": "find_items"
-        }
+        """Parse a natural language query into structured intent."""
+        try:
+            resp = self.client.models.generate_content(
+                model=GEMINI_LLM_MODEL,
+                contents=query,
+                config=types.GenerateContentConfig(
+                    system_instruction=_SYSTEM_PROMPT,
+                    temperature=0.0,
+                    response_mime_type="application/json",
+                ),
+            )
+            parsed = json.loads(resp.text)
+            # Ensure all expected keys exist
+            parsed.setdefault("semantic_query", query)
+            parsed.setdefault("filters", {})
+            parsed.setdefault("exclude", [])
+            parsed.setdefault("intent", "find_items")
+            # Clean null string values in filters
+            filters = parsed["filters"]
+            for k, v in list(filters.items()):
+                if v is None or v == "null" or v == "":
+                    del filters[k]
+            return parsed
+        except Exception as e:
+            logger.warning(f"Query parsing failed: {e}. Falling back to raw query.")
+            return {
+                "semantic_query": query,
+                "filters": {},
+                "exclude": [],
+                "intent": "find_items",
+            }
