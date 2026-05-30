@@ -250,9 +250,12 @@ class SearchEngine:
 
         # Apply structured filters
         if parsed and parsed.get("filters"):
-            results = self._apply_filters(
+            filtered_results = self._apply_filters(
                 results, parsed["filters"], parsed.get("exclude", [])
             )
+            # If the dataset is messy and filters removed everything, fall back to unfiltered results
+            if len(filtered_results) > 0:
+                results = filtered_results
 
         # Contextual re-ranking
         if parsed and self.reranker and len(results) > top_k:
