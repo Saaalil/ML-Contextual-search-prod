@@ -24,114 +24,128 @@ logger = logging.getLogger(__name__)
 # ── Custom CSS for premium look ──────────────────────────────────────
 
 CUSTOM_CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,400..700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 * {
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Google Sans Flex', system-ui, sans-serif !important;
 }
 
 .gradio-container {
     max-width: 1200px !important;
     margin: auto !important;
-    background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%) !important;
+    background-color: #0b0f19 !important;
+    background-image: radial-gradient(circle at 50% 0%, rgba(66, 133, 244, 0.15), transparent 40%),
+                      radial-gradient(circle at 100% 100%, rgba(234, 67, 53, 0.1), transparent 40%) !important;
     min-height: 100vh;
 }
 
 .main-header {
     text-align: center;
-    padding: 2rem 1rem 1rem;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
-    border-radius: 16px;
-    margin-bottom: 1.5rem;
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    backdrop-filter: blur(20px);
-}
-
-.main-header h1 {
-    background: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 2.5rem !important;
-    font-weight: 700 !important;
-    margin-bottom: 0.5rem !important;
-    letter-spacing: -0.02em;
-}
-
-.main-header p {
-    color: rgba(255, 255, 255, 0.6) !important;
-    font-size: 1rem !important;
-    font-weight: 300;
-}
-
-.search-tab {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    padding: 1.5rem !important;
+    padding: 2.5rem 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 2px solid #4285F4;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(10px);
 }
 
-.result-gallery {
+.main-header h1 {
+    font-family: 'JetBrains Mono', monospace !important;
+    color: #e8eaed !important;
+    font-size: 2.2rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
+    letter-spacing: -0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.main-header h1 span.highlight {
+    background: linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.main-header p {
+    color: #9aa0a6 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.95rem !important;
+    font-weight: 400;
+}
+
+.search-tab {
     background: rgba(255, 255, 255, 0.02) !important;
-    border-radius: 12px !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    padding: 1rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 8px !important;
+    padding: 1.5rem !important;
+}
+
+.result-gallery {
+    background: transparent !important;
+    border: none !important;
 }
 
 .search-btn {
-    background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
-    border: none !important;
+    background: #4285F4 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: white !important;
-    font-weight: 600 !important;
-    padding: 0.75rem 2rem !important;
-    border-radius: 10px !important;
-    font-size: 1rem !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;
+    font-weight: 500 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
 }
 
 .search-btn:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4) !important;
+    background: #3b78e7 !important;
+    transform: translateY(-1px) !important;
 }
 
 .context-badge {
     display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace !important;
     font-size: 0.75rem;
     font-weight: 500;
     margin: 2px;
 }
 
 .badge-filter {
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    background: rgba(66, 133, 244, 0.1) !important;
+    color: #8ab4f8 !important;
+    border: 1px solid rgba(66, 133, 244, 0.3) !important;
 }
 
 .badge-intent {
-    background: rgba(236, 72, 153, 0.2);
-    color: #f472b6;
-    border: 1px solid rgba(236, 72, 153, 0.3);
+    background: rgba(52, 168, 83, 0.1) !important;
+    color: #81c995 !important;
+    border: 1px solid rgba(52, 168, 83, 0.3) !important;
 }
 
 footer { display: none !important; }
 
 .tab-nav button {
-    font-weight: 500 !important;
-    font-size: 0.95rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    color: #9aa0a6 !important;
 }
 
 .tab-nav button.selected {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2)) !important;
-    border-bottom: 2px solid #8b5cf6 !important;
+    color: #e8eaed !important;
+    border-bottom: 2px solid #4285F4 !important;
 }
 
 .example-queries {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.85rem;
+    color: #5f6368 !important;
+    font-size: 0.8rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
     margin-top: 0.5rem;
 }
 """
@@ -145,8 +159,8 @@ def build_no_index_app(index_dir: Path):
         gr.HTML(
             """
             <div class="main-header">
-                <h1>👗 StyleGraph</h1>
-                <p>Multimodal Fashion Search · Powered by Gemini</p>
+                <h1>> <span class="highlight">Antigravity</span> StyleGraph</h1>
+                <p>AI-Powered Visual Search Prototype</p>
             </div>
             """
         )
@@ -289,8 +303,8 @@ def build_app(index_dir: str | None = None, device: str | None = None):
         gr.HTML(
             """
             <div class="main-header">
-                <h1>👗 StyleGraph</h1>
-                <p>Contextual Multimodal Fashion Search · Powered by Gemini Embedding 2</p>
+                <h1>> <span class="highlight">Antigravity</span> StyleGraph</h1>
+                <p>AI-Powered Visual Search Prototype</p>
             </div>
             """
         )
