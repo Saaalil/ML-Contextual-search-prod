@@ -17,7 +17,11 @@ jobs:
       - name: Push to HF Spaces
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE: ${{ vars.HF_SPACE }}
+          HF_SPACE: ${{ vars.HF_SPACE || secrets.HF_SPACE }}
         run: |
-          git remote add hf https://user:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE || true
+          if [ -z "$HF_SPACE" ]; then
+            echo "Error: HF_SPACE is not set in GitHub Variables or Secrets."
+            exit 1
+          fi
+          git remote set-url hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE || git remote add hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE
           git push hf main --force
