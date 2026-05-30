@@ -28,37 +28,43 @@ class QueryParser:
         query_lower = query.lower()
         filters = {}
         
+        # Helper to find keywords, accounting for simple plurals (s, es)
+        def find_match(vocab: set) -> Optional[str]:
+            for word in sorted(list(vocab), key=len, reverse=True):
+                pattern = rf'\b{re.escape(word)}(?:s|es)?\b'
+                if re.search(pattern, query_lower):
+                    return word
+            return None
+
         # 1. Extract Price (e.g., "under $50", "below 100", "< 200")
         price_match = re.search(r'(?:under|below|<)\s*\$?(\d+)', query_lower)
         if price_match:
             filters["price_max"] = int(price_match.group(1))
             
         # 2. Extract Keywords
-        words = set(re.findall(r'\b\w+\b', query_lower))
-        
-        color_match = words.intersection(COLORS)
+        color_match = find_match(COLORS)
         if color_match:
-            filters["color"] = list(color_match)[0]
+            filters["color"] = color_match
             
-        cat_match = words.intersection(CATEGORIES)
+        cat_match = find_match(CATEGORIES)
         if cat_match:
-            filters["category"] = list(cat_match)[0]
+            filters["category"] = cat_match
             
-        occ_match = words.intersection(OCCASIONS)
+        occ_match = find_match(OCCASIONS)
         if occ_match:
-            filters["occasion"] = list(occ_match)[0]
+            filters["occasion"] = occ_match
             
-        mat_match = words.intersection(MATERIALS)
+        mat_match = find_match(MATERIALS)
         if mat_match:
-            filters["material"] = list(mat_match)[0]
+            filters["material"] = mat_match
             
-        fit_match = words.intersection(FITS)
+        fit_match = find_match(FITS)
         if fit_match:
-            filters["fit"] = list(fit_match)[0]
+            filters["fit"] = fit_match
             
-        season_match = words.intersection(SEASONS)
+        season_match = find_match(SEASONS)
         if season_match:
-            filters["season"] = list(season_match)[0]
+            filters["season"] = season_match
 
         # 3. Exclude (simple negations)
         exclude = []
