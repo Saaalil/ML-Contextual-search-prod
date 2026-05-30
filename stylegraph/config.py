@@ -21,8 +21,8 @@ GEMINI_EMBED_TASK_QUERY = "RETRIEVAL_QUERY"
 GEMINI_LLM_MODEL = "gemini-2.0-flash"
 
 # ── Rate limiting ────────────────────────────────────────────────────
-GEMINI_RPM_LIMIT = 90
-GEMINI_BATCH_DELAY = 0.7
+GEMINI_RPM_LIMIT = 15
+GEMINI_BATCH_DELAY = 4.1
 
 # ── Retrieval ────────────────────────────────────────────────────────
 TOP_K = 20
