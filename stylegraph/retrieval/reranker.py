@@ -16,6 +16,9 @@ from typing import Optional
 
 from google import genai
 from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from stylegraph.config import GEMINI_LLM_MODEL
 

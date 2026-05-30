@@ -17,6 +17,9 @@ from pathlib import Path
 import faiss
 import numpy as np
 from tqdm import tqdm
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from stylegraph.config import (
     ROOT_DIR,

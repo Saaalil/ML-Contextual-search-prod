@@ -21,6 +21,9 @@ import numpy as np
 from PIL import Image
 from google import genai
 from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from stylegraph.config import (
     GEMINI_EMBED_MODEL,
