@@ -1,0 +1,47 @@
+name: Rebuild FAISS Index
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Number of images to index"
+        default: "300"
+        required: false
+  schedule:
+    - cron: "0 2 * * 0"  # Weekly Sunday 2AM UTC
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare demo subset
+        run: |
+          python -m scripts.prepare_demo_subset --limit ${{ github.event.inputs.limit || '300' }}
+
+      - name: Build Gemini FAISS index
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python -m stylegraph.model.build_gemini_index \
+            --catalog data/catalog/demo_products.jsonl \
+            --output data/index
+
+      - name: Upload index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: faiss-index
+          path: data/index/
+          retention-days: 90

@@ -1,84 +1,120 @@
+---
+title: StyleGraph - Multimodal Fashion Search
+emoji: 👗
+colorFrom: purple
+colorTo: pink
+sdk: gradio
+sdk_version: "5.0.0"
+app_file: app.py
+pinned: false
+---
+
 # StyleGraph
 
-StyleGraph is a personal-scale, single-GPU pipeline for building shoppable fashion collections from images and metadata. It covers:
+**Contextual multimodal fashion search** powered by Google's Gemini Embedding 2. Upload a photo or describe what you want — StyleGraph understands style, occasion, price, and more.
 
-- Data ingestion (DeepFashion2 + optional extras)
-- VLM attribute extraction (BLIP-2)
-- Attribute curation
-- Dual encoder training (OpenCLIP)
-- FAISS indexing and retrieval
-- Gradio demo + Hugging Face Spaces deployment
+## Features
 
-## Quick start (demo after you build an index)
-1. Create a virtual environment.
-2. Install demo dependencies: pip install -r requirements.txt
-3. Build an index (see "Build the index").
-4. Run the app: python app.py
+- 🔍 **Text-to-Image Search**: "red summer dress under $80" → contextually relevant results
+- 🖼️ **Image-to-Image Search**: Upload a photo → find visually similar items
+- 🧠 **3-Layer Contextual Pipeline**:
+  1. **Query Understanding** (Gemini Flash) — parses intent, filters, exclusions
+  2. **Vector Retrieval** (Gemini Embedding 2 + FAISS) — fast nearest-neighbor search
+  3. **Contextual Re-ranking** (Gemini Flash) — scores relevance beyond raw similarity
+- 💰 All free — no paid APIs, no GPU needed for inference
 
-## Setup
-Python 3.10+ recommended.
+## Quick Start
 
-Windows (PowerShell):
+### 1. Install dependencies
+```bash
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+# Windows: .\.venv\Scripts\Activate.ps1
+# Linux/Mac: source .venv/bin/activate
 pip install -r requirements.txt
+```
 
-Linux/macOS:
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+### 2. Set your free API key
+Get one at [aistudio.google.com](https://aistudio.google.com) — no credit card needed.
+```bash
+# Windows PowerShell:
+$env:GEMINI_API_KEY = "your_key_here"
 
-For training and BLIP-2 extraction, also install:
-pip install -r requirements-train.txt
+# Linux/Mac:
+export GEMINI_API_KEY="your_key_here"
+```
 
-Optional LLM judge:
-pip install -r requirements-llm.txt
+### 3. Prepare demo images (300 from DeepFashion2)
+```bash
+python -m scripts.prepare_demo_subset --limit 300
+```
 
-## Stage 1 - Data (DeepFashion2)
-1. Download DeepFashion2 and place it in data/raw/deepfashion2.
-2. Build a catalog:
-python -m stylegraph.data.build_catalog --input-dir data/raw/deepfashion2 --output data/catalog/products.jsonl --splits train,validation --limit 50000
+### 4. Build the FAISS index
+```bash
+python -m stylegraph.model.build_gemini_index
+```
 
-DeepFashion2 does not include titles or prices, so this script generates a simple title and a synthetic price per item.
-
-## Stage 2 - Attribute extraction (BLIP-2)
-Run on GPU (Colab or Kaggle recommended):
-python -m stylegraph.attributes.extract_blip2 --catalog data/catalog/products.jsonl --output data/attrs/attrs.jsonl --device cuda --limit 20000
-
-You can change the model with --model if VRAM is limited.
-
-## Stage 2b - Attribute curation (optional but recommended)
-python -m stylegraph.attributes.curate_vocab --input data/attrs/attrs.jsonl --output-dir data/attrs --cluster
-
-This produces:
-- data/attrs/vocab.json
-- data/attrs/attrs_canon.jsonl
-
-## Stage 2c - LLM-as-judge (optional)
-python -m stylegraph.attributes.judge_pairs --catalog data/catalog/products.jsonl --attrs data/attrs/attrs_canon.jsonl --output data/attrs/pairs.jsonl
-
-## Stage 3 - Hard negatives (optional)
-python -m stylegraph.model.mine_hard_negatives --pairs data/attrs/pairs.jsonl --output data/attrs/pairs_hard.jsonl --negatives 5
-
-## Stage 3 - Train dual encoder
-python -m stylegraph.model.train_dual_encoder --pairs data/attrs/pairs_hard.jsonl --output models/clip --device cuda --batch-size 64 --epochs 3 --neg-per-sample 2
-
-## Stage 3b - Build the index
-python -m stylegraph.model.build_faiss --catalog data/catalog/products.jsonl --attrs data/attrs/attrs_canon.jsonl --model-dir models/clip --output data/index --device cuda
-
-## Stage 4 - Run the demo
+### 5. Run the app
+```bash
 python app.py
+```
 
-You can override the index path:
-STYLEGRAPH_INDEX_DIR=data/index python app.py
+## Architecture
+
+```
+User Query (text or image)
+    │
+    ├── [Layer 1] Gemini Flash — Parse intent, extract filters
+    │
+    ├── [Layer 2] Gemini Embedding 2 — Vector similarity via FAISS
+    │
+    └── [Layer 3] Gemini Flash — Contextual re-ranking
+    │
+    └── Final Results (filtered, re-ranked, contextually relevant)
+```
+
+### Why contextual, not just semantic?
+
+| Feature | Semantic Search | StyleGraph (Contextual) |
+|---------|----------------|------------------------|
+| "red dress under $50" | Ignores price | Filters by price ≤ $50 |
+| "office outfit, not sporty" | Can't handle negation | Excludes sporty items |
+| "beach wedding guest" | Matches keywords | Understands occasion context |
+| "bohemian summer vibes" | Surface similarity | Deep style understanding |
 
 ## Deploy to Hugging Face Spaces
-1. Create a new Space (Gradio).
-2. Push this repo to the Space.
-3. Build the FAISS index locally and upload data/index to the Space (or build inside the Space if you have storage).
-4. Add optional secrets (OPENAI_API_KEY) if you use the LLM judge.
-5. The Space will run app.py by default.
 
-Notes:
-- faiss-cpu is not available on native Windows pip. Use WSL, conda, or build the index on Linux (Kaggle/Colab) and copy data/index back.
+1. Create a new Space at [huggingface.co/new-space](https://huggingface.co/new-space) (Gradio SDK).
+2. Push this repo to the Space.
+3. Add `GEMINI_API_KEY` as a secret in Space Settings.
+4. Upload the `data/index/` directory (faiss.index + metadata.jsonl + model.json).
+5. The Space runs `app.py` by default.
+
+## Pipeline Stages (for training / custom datasets)
+
+| Stage | Script | Description |
+|-------|--------|-------------|
+| Data prep | `scripts/prepare_demo_subset.py` | Extract demo images from DeepFashion2 |
+| Catalog | `stylegraph/data/build_catalog.py` | Build product catalog JSONL |
+| Attributes | `stylegraph/attributes/extract_blip2.py` | BLIP-2 attribute extraction (GPU) |
+| Vocab | `stylegraph/attributes/curate_vocab.py` | LLM-powered vocab curation |
+| Index | `stylegraph/model/build_gemini_index.py` | **Gemini Embedding 2 → FAISS** |
+| Search | `stylegraph/retrieval/search.py` | 3-layer contextual search engine |
+| Demo | `stylegraph/demo/app.py` | Gradio web UI |
+
+## Tech Stack (all free)
+
+| Component | Technology | Cost |
+|-----------|------------|------|
+| Embeddings | Gemini Embedding 2 (Google AI Studio) | Free |
+| Query Understanding | Gemini 2.0 Flash | Free |
+| Re-ranking | Gemini 2.0 Flash | Free |
+| Vector Search | FAISS (CPU) | Free |
+| UI | Gradio | Free |
+| Hosting | Hugging Face Spaces | Free |
+| CI/CD | GitHub Actions | Free |
+
+## Notes
+
+- `faiss-cpu` is not available on native Windows pip. Use WSL, conda, or build the index on Linux (Kaggle/Colab).
 - DeepFashion2 requires manual download due to license terms.
+- The old OpenCLIP pipeline is preserved for backward compatibility.
