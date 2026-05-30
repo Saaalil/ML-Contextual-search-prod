@@ -62,6 +62,12 @@ def main() -> None:
         help="Resume from partially-built index.",
     )
     parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Maximum number of images to process in this run (0 for no limit). Useful for daily API quotas.",
+    )
+    parser.add_argument(
         "--dim",
         type=int,
         default=GEMINI_EMBED_DIM,
@@ -95,6 +101,10 @@ def main() -> None:
     if not pending:
         print("✅  All items already indexed. Nothing to do.")
         return
+
+    if args.limit > 0:
+        pending = pending[:args.limit]
+        print(f"⚠️  Limiting this run to {args.limit} images to respect API quotas.")
 
     print(f"🔄  Indexing {len(pending)} images with Gemini Embedding...")
 
