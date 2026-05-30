@@ -205,14 +205,25 @@ def build_app(index_dir: str | None = None, device: str | None = None):
 
     engine = SearchEngine.from_dir(index_dir, device=device or "cpu")
 
-    def results_to_gallery(results):
+    def results_to_gallery(results, query=""):
         """Convert search results to Gradio gallery format."""
         gallery = []
+        
+        # Make a nice dynamic title out of the query if the DB doesn't have one
+        fallback_title = "Fashion Item"
+        if query and len(query) < 20:
+            fallback_title = f"{query.title()} Match"
+            
         for item in results:
             try:
                 image = engine.load_image(item["image_path"])
                 score = item.get("rerank_score", item.get("score", 0))
                 title = item.get("title", "Unknown")
+                
+                # Hide the ugly 'unknown item' label
+                if title.lower() == "unknown item" or title.lower() == "unknown":
+                    title = fallback_title
+                    
                 price = item.get("price", 0)
                 reason = item.get("rerank_reason", "")
 
@@ -276,7 +287,7 @@ def build_app(index_dir: str | None = None, device: str | None = None):
                     context_info = format_context_info(parsed)
                 except Exception:
                     pass
-            return results_to_gallery(results), context_info
+            return results_to_gallery(results, text), context_info
         except Exception as e:
             logger.error(f"Search error: {e}")
             return [], f"⚠️ Error: {str(e)}"
@@ -287,7 +298,7 @@ def build_app(index_dir: str | None = None, device: str | None = None):
             return []
         try:
             results = engine.search_image(image, top_k=int(top_k))
-            return results_to_gallery(results)
+            return results_to_gallery(results, "Similar Items")
         except Exception as e:
             logger.error(f"Image search error: {e}")
             return []
