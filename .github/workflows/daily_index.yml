@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -55,7 +58,8 @@ jobs:
         run: |
           python -m stylegraph.model.build_gemini_index \
             --catalog data/catalog/demo_products.jsonl \
-            --output data/index
+            --output data/index \
+            --resume
 
       - name: Upload index artifact
         uses: actions/upload-artifact@v4
@@ -63,3 +67,23 @@ jobs:
           name: faiss-index-daily
           path: data/index/
           retention-days: 90
+
+      - name: Commit and push changes to GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/index/
+          git commit -m "chore: update daily index with ${{ steps.calc.outputs.limit }} new embeddings" || echo "No changes to commit"
+          git push origin main
+
+      - name: Push to HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE || secrets.HF_SPACE }}
+        run: |
+          if [ -z "$HF_SPACE" ]; then
+            echo "Error: HF_SPACE is not set in GitHub Variables or Secrets."
+            exit 1
+          fi
+          git remote set-url hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE || git remote add hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE
+          git push hf main --force
