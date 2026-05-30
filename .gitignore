@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+data/
+models/
+outputs/
+logs/
+*.ipynb
+.DS_Store
+
+# Large datasets & zip files
+deepfashion2.zip
+DeepFashion2/
