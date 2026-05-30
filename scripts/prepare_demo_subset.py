@@ -96,6 +96,7 @@ def main() -> None:
         help="Output JSONL catalog path.",
     )
     parser.add_argument("--limit", type=int, default=300, help="Number of images.")
+    parser.add_argument("--offset", type=int, default=0, help="Offset for slicing images.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     args = parser.parse_args()
 
@@ -118,9 +119,11 @@ def main() -> None:
 
     # Sample subset
     random.seed(args.seed)
-    limit = min(args.limit, len(all_images))
-    selected = random.sample(all_images, limit)
-    print(f"📸  Selected {limit} images for demo subset.")
+    shuffled_images = list(all_images)
+    random.shuffle(shuffled_images)
+    limit = min(args.limit, max(0, len(shuffled_images) - args.offset))
+    selected = shuffled_images[args.offset : args.offset + limit]
+    print(f"📸  Selected {limit} images (offset {args.offset}) for demo subset.")
 
     # Copy images and build catalog
     output_dir.mkdir(parents=True, exist_ok=True)

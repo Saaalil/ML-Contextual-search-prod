@@ -1,0 +1,65 @@
+name: Daily Index Push
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # Runs daily at midnight UTC
+
+jobs:
+  daily-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Calculate limit and offset
+        id: calc
+        run: |
+          BASE_DATE="2026-05-30"
+          CURRENT_DATE=$(date -u +%Y-%m-%d)
+          
+          # Calculate days difference
+          BASE_SEC=$(date -u -d "$BASE_DATE" +%s)
+          CURRENT_SEC=$(date -u -d "$CURRENT_DATE" +%s)
+          DIFF_DAYS=$(( (CURRENT_SEC - BASE_SEC) / 86400 ))
+          
+          if [ "$DIFF_DAYS" -le 0 ]; then
+            LIMIT=1200
+            OFFSET=0
+          else
+            LIMIT=1500
+            OFFSET=$(( 1200 + (DIFF_DAYS - 1) * 1500 ))
+          fi
+          
+          echo "limit=$LIMIT" >> $GITHUB_OUTPUT
+          echo "offset=$OFFSET" >> $GITHUB_OUTPUT
+          echo "Calculated Limit: $LIMIT, Offset: $OFFSET for diff days: $DIFF_DAYS"
+
+      - name: Prepare demo subset
+        run: |
+          python -m scripts.prepare_demo_subset --limit ${{ steps.calc.outputs.limit }} --offset ${{ steps.calc.outputs.offset }}
+
+      - name: Build Gemini FAISS index
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python -m stylegraph.model.build_gemini_index \
+            --catalog data/catalog/demo_products.jsonl \
+            --output data/index
+
+      - name: Upload index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: faiss-index-daily
+          path: data/index/
+          retention-days: 90
