@@ -193,20 +193,9 @@ class SearchEngine:
                 if float(item.get("price", 0)) < filters["price_min"]:
                     skip = True
 
-            # Category filter
-            if "category" in filters and filters["category"]:
-                item_cat = (item.get("category", "") or "").lower()
-                if filters["category"].lower() not in item_cat:
-                    skip = True
-
-            # Attribute filters (color, style, occasion, etc.)
-            for key in ["color", "occasion", "style", "season", "material", "fit"]:
-                if key in filters and filters[key]:
-                    item_val = (attrs.get(key, "") or "").lower()
-                    if item_val and filters[key].lower() not in item_val:
-                        # Soft filter: don't skip if attr is unknown
-                        if item_val != "unknown":
-                            skip = True
+            # Category filter (removed - let vector search handle it)
+            
+            # Attribute filters (color, style, occasion, etc.) (removed - let vector search handle it)
 
             # Exclusion list
             for exc in exclude:
