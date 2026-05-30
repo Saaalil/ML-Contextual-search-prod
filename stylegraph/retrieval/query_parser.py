@@ -40,22 +40,15 @@ class QueryParser:
         filters = {}
         exclude = []
         
-        # 1. Extract STRICT Mathematical Constraints (Price)
-        # Matches: "under $50", "below 100", "< 200", "under 50"
-        price_match = re.search(r'(?:under|below|<)\s*\$?\s*(\d+)', query_lower)
-        if price_match:
-            filters["price_max"] = int(price_match.group(1))
-            
-        # 2. Extract STRICT Exclusions
+        # 1. Extract STRICT Exclusions
         # Matches: "not red", "no jeans"
         not_match = re.search(r'(?:not|no)\s+([a-zA-Z0-9]+)', query_lower)
         if not_match:
             exclude.append(not_match.group(1))
 
-        # 3. Clean the semantic query
+        # 2. Clean the semantic query
         # Remove the strict constraints so they don't confuse the embedding model
         semantic_query = query_lower
-        semantic_query = re.sub(r'(?:under|below|<)\s*\$?\s*(\d+)', '', semantic_query)
         semantic_query = re.sub(r'(?:not|no)\s+([a-zA-Z0-9]+)', '', semantic_query)
         semantic_query = semantic_query.strip()
         
