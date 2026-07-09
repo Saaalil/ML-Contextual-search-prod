@@ -1,91 +1,91 @@
-name: Daily Index Push
+# name: Daily Index Push
 
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * *" # Runs daily at midnight UTC
+# on:
+#   workflow_dispatch:
+#   schedule:
+#     - cron: "0 0 * * *" # Runs daily at midnight UTC
 
-jobs:
-  daily-index:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          lfs: true
+# jobs:
+#   daily-index:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: write
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+#           lfs: true
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+#       - name: Install dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install -r requirements.txt
 
-      - name: Calculate limit and offset
-        id: calc
-        run: |
-          BASE_DATE="2026-05-30"
-          CURRENT_DATE=$(date -u +%Y-%m-%d)
+#       - name: Calculate limit and offset
+#         id: calc
+#         run: |
+#           BASE_DATE="2026-05-30"
+#           CURRENT_DATE=$(date -u +%Y-%m-%d)
           
-          # Calculate days difference
-          BASE_SEC=$(date -u -d "$BASE_DATE" +%s)
-          CURRENT_SEC=$(date -u -d "$CURRENT_DATE" +%s)
-          DIFF_DAYS=$(( (CURRENT_SEC - BASE_SEC) / 86400 ))
+#           # Calculate days difference
+#           BASE_SEC=$(date -u -d "$BASE_DATE" +%s)
+#           CURRENT_SEC=$(date -u -d "$CURRENT_DATE" +%s)
+#           DIFF_DAYS=$(( (CURRENT_SEC - BASE_SEC) / 86400 ))
           
-          if [ "$DIFF_DAYS" -le 0 ]; then
-            LIMIT=1200
-            OFFSET=0
-          else
-            LIMIT=1500
-            OFFSET=$(( 1200 + (DIFF_DAYS - 1) * 1500 ))
-          fi
+#           if [ "$DIFF_DAYS" -le 0 ]; then
+#             LIMIT=1200
+#             OFFSET=0
+#           else
+#             LIMIT=1500
+#             OFFSET=$(( 1200 + (DIFF_DAYS - 1) * 1500 ))
+#           fi
           
-          echo "limit=$LIMIT" >> $GITHUB_OUTPUT
-          echo "offset=$OFFSET" >> $GITHUB_OUTPUT
-          echo "Calculated Limit: $LIMIT, Offset: $OFFSET for diff days: $DIFF_DAYS"
+#           echo "limit=$LIMIT" >> $GITHUB_OUTPUT
+#           echo "offset=$OFFSET" >> $GITHUB_OUTPUT
+#           echo "Calculated Limit: $LIMIT, Offset: $OFFSET for diff days: $DIFF_DAYS"
 
-      - name: Prepare demo subset
-        run: |
-          python -m scripts.prepare_demo_subset --limit ${{ steps.calc.outputs.limit }} --offset ${{ steps.calc.outputs.offset }}
+#       - name: Prepare demo subset
+#         run: |
+#           python -m scripts.prepare_demo_subset --limit ${{ steps.calc.outputs.limit }} --offset ${{ steps.calc.outputs.offset }}
 
-      - name: Build Gemini FAISS index
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python -m stylegraph.model.build_gemini_index \
-            --catalog data/catalog/demo_products.jsonl \
-            --output data/index \
-            --resume
+#       - name: Build Gemini FAISS index
+#         env:
+#           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+#         run: |
+#           python -m stylegraph.model.build_gemini_index \
+#             --catalog data/catalog/demo_products.jsonl \
+#             --output data/index \
+#             --resume
 
-      - name: Upload index artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: faiss-index-daily
-          path: data/index/
-          retention-days: 90
+#       - name: Upload index artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: faiss-index-daily
+#           path: data/index/
+#           retention-days: 90
 
-      - name: Commit and push changes to GitHub
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f data/index/
-          git commit -m "chore: update daily index with ${{ steps.calc.outputs.limit }} new embeddings" || echo "No changes to commit"
-          git push origin main
+#       - name: Commit and push changes to GitHub
+#         run: |
+#           git config --global user.name "github-actions[bot]"
+#           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+#           git add -f data/index/
+#           git commit -m "chore: update daily index with ${{ steps.calc.outputs.limit }} new embeddings" || echo "No changes to commit"
+#           git push origin main
 
-      - name: Push to HF Spaces
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE: ${{ vars.HF_SPACE || secrets.HF_SPACE }}
-        run: |
-          if [ -z "$HF_SPACE" ]; then
-            echo "Error: HF_SPACE is not set in GitHub Variables or Secrets."
-            exit 1
-          fi
-          git remote set-url hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE || git remote add hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE
-          git push hf main --force
+#       - name: Push to HF Spaces
+#         env:
+#           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+#           HF_SPACE: ${{ vars.HF_SPACE || secrets.HF_SPACE }}
+#         run: |
+#           if [ -z "$HF_SPACE" ]; then
+#             echo "Error: HF_SPACE is not set in GitHub Variables or Secrets."
+#             exit 1
+#           fi
+#           git remote set-url hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE || git remote add hf https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE
+#           git push hf main --force
